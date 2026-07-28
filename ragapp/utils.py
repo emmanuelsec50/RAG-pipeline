@@ -70,7 +70,7 @@ def embed(context):
 
 def retrieve_relevant_resources(query: str,
                                 embeddings: torch.tensor,
-                                n_resources_to_return: int=5,
+                                n_resources_to_return: int=8,
                                 print_time: bool=True):
     """
     Embeds a query with model and returns top k scores and indices from embeddings.
