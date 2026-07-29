@@ -106,7 +106,7 @@ def print_top_results_and_scores(query: str,
                                                   n_resources_to_return=n_resources_to_return)
 
 
-    pages_and_chunks_save_path_pickle = "pages_and_chunks.pkl"
+    pages_and_chunks_save_path_pickle = "pages_and_chunks1.pkl"
     with open(pages_and_chunks_save_path_pickle, "rb") as f:
         pages_and_chunks = pickle.load(f)
 
@@ -162,12 +162,12 @@ def ask(query: str,
     # RETRIEVAL
     # Get just the scores and indices of top related results
 
-    embeddings = torch.load('embeddings.pt')
+    embeddings = torch.load('embeddings1.pt')
     scores, indices = retrieve_relevant_resources(query=query,
                                                   embeddings=embeddings)
 
     # Create a list of context items
-    pages_and_chunks_save_path_pickle = "pages_and_chunks.pkl"
+    pages_and_chunks_save_path_pickle = "pages_and_chunks1.pkl"
     with open(pages_and_chunks_save_path_pickle, "rb") as f:
         pages_and_chunks = pickle.load(f)
     context_items = [pages_and_chunks[i] for i in indices] 
