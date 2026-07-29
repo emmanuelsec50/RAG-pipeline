@@ -7,6 +7,7 @@ from openai import OpenAI
 from sentence_transformers import util
 import textwrap
 import pickle
+from decouple import config
 
 def print_wrapped(text, wrap_length=80):
     wrapped_text = textwrap.fill(text, wrap_length)
@@ -35,7 +36,7 @@ Answer:"""
 
 def embed(context):
   # --- Configuration ---
-    embed_api_key = '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'  # Get from openrouter.ai/settings/keys
+    embed_api_key = config("EMBED_API_KEY")  # Get from openrouter.ai/settings/keys
     url = "https://integrate.api.nvidia.com/v1/embeddings"
 
     headers = {
@@ -120,7 +121,7 @@ def print_top_results_and_scores(query: str,
 def glm(prompt: str):
   client = OpenAI(
   base_url = "https://integrate.api.nvidia.com/v1",
-  api_key = "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"
+  api_key = config("GLM_API_KEY")
   )
 
   _USE_COLOR = sys.stdout.isatty() and os.getenv("NO_COLOR") is None
