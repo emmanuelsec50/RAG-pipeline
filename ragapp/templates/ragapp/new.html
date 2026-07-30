@@ -528,7 +528,7 @@
   const knobIcon = document.getElementById('knobIcon');
 
   // ---------- Theme ----------
-  let theme = 'dark';
+  let theme = 'light';
   themeToggle.addEventListener('click', () => {
     theme = theme === 'dark' ? 'light' : 'dark';
     document.body.setAttribute('data-theme', theme);
@@ -620,6 +620,7 @@
 
     const refs = createAssistantMessage();
     let reasoningChars = 0;
+    let answerStarted = false;
     let cursorSpan = document.createElement('span');
     cursorSpan.className = 'cursor';
     refs.answerEl.appendChild(cursorSpan);
@@ -666,8 +667,14 @@
             refs.reasoningBody.textContent += parsed.text;
             if (!refs.userToggled) refs.reasoningBody.scrollTop = refs.reasoningBody.scrollHeight;
           } else if (parsed.type === 'content') {
+            let text = parsed.text;
+            if (!answerStarted) {
+              text = text.replace(/^\s+/, '');
+              if (text.length === 0) continue; // still all whitespace, skip until real content arrives
+              answerStarted = true;
+            }
             cursorSpan.remove();
-            refs.answerEl.append(parsed.text);
+            refs.answerEl.append(text);
             refs.answerEl.appendChild(cursorSpan);
             scrollToBottom();
           } else if (parsed.type === 'error') {

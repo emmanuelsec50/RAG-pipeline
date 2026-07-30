@@ -37,7 +37,7 @@ Answer:"""
 
 def embed(context):
   # --- Configuration ---
-    embed_api_key = config("EMBED_API_KEY")  # Get from openrouter.ai/settings/keys
+    embed_api_key = config("EMBED_API_KEY")
     url = "https://integrate.api.nvidia.com/v1/embeddings"
 
     headers = {
@@ -81,21 +81,21 @@ def retrieve_relevant_resources(query: str,
 
     # Embed the query
     # query_embedding = model.encode(query, convert_to_tensor=True)
-    t0 = time.time()
+    
     query_embedding = embed(query)
-    print(f"[TIMING] embedding request: {time.time() - t0:.2f}s")
+    
 
     # Get dot product scores on embeddings
-    t1 = time.time()
+    
     dot_scores = util.dot_score(query_embedding, embeddings)[0]
-    print(f"[TIMING] dot scores: {time.time() - t1:.2f}s")
+    
 
     # if print_time:
     #     print(f"[INFO] Time taken to get scores on ({len(embeddings)} embeddings: {end_time-start_time:.5f} seconds.")
-    t2 = time.time()
+    
     scores, indices = torch.topk(input=dot_scores,
                                  k=n_resources_to_return)
-    print(f"[TIMING] top k: {time.time() - t2:.2f}s")
+    
     return scores, indices
 
 def print_top_results_and_scores(query: str,
@@ -109,39 +109,36 @@ def print_top_results_and_scores(query: str,
                                                   embeddings=embeddings,
                                                   n_resources_to_return=n_resources_to_return)
 
-    t3 = time.time()
+    
     pages_and_chunks_save_path_pickle = "./ragapp/pages_and_chunks1.pkl"
     with open(pages_and_chunks_save_path_pickle, "rb") as f:
         pages_and_chunks = pickle.load(f)
-    print(f"[TIMING] retrieval of ./ragapp/pages_and_chunks1.pkl: {time.time() - t3:.2f}s")
+    
     # Loop through zipped together scores and indices from torch.topk
     for score, idx in zip(scores, indices):
-        # print(f"Score: {score:.4f}")
-        # print("Text:")
+        
         print_wrapped(pages_and_chunks[idx]["sentence_chunk"])
-        # print(f"Page number: {pages_and_chunks[idx]['page_number']}")
+        
         print("\n")
 
 def glm(prompt: str):
     client = OpenAI(
-        base_url="https://integrate.api.nvidia.com/v1",
-        api_key=config("GLM_API_KEY")
-    )
+    api_key=config('DEEPSEEK_API_KEY'),
+    base_url="https://api.deepseek.com")
 
-    t4 = time.time()
-    completion = client.chat.completions.create(
-        model="z-ai/glm-5.2",
-        messages=[{'role': 'user', 'content': prompt}],
-        temperature=0.78,
-        top_p=0.81,
-        max_tokens=16384,
-        seed=42,
-        # extra_body={"chat_template_kwargs": {"enable_thinking": True, "clear_thinking": False}},
-        stream=True
+    response = client.chat.completions.create(
+        model="deepseek-v4-flash",
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant"},
+            {"role": "user", "content": prompt},
+        ],
+        stream=True,
+        reasoning_effort="high",
+        extra_body={"thinking": {"type": "disabled"}}
     )
-    print(f"[TIMING] glm: {time.time() - t4:.2f}s")
-    t13 = time.time()
-    for chunk in completion:
+    # print(f"[TIMING] glm: {time.time() - t4:.2f}s")
+    # t13 = time.time()
+    for chunk in response:
         if not getattr(chunk, "choices", None):
             continue
         if len(chunk.choices) == 0 or getattr(chunk.choices[0], "delta", None) is None:
@@ -156,7 +153,7 @@ def glm(prompt: str):
             yield f"data: {json.dumps({'type': 'content', 'text': content})}\n\n"
     
     yield "data: [DONE]\n\n"
-    print(f"[TIMING] glm: {time.time() - t13:.2f}s")
+    # print(f"[TIMING] glm: {time.time() - t13:.2f}s")
 def ask(query: str,
         temperature: float=0.7,
         max_new_tokens:int=256,
@@ -168,30 +165,30 @@ def ask(query: str,
 
     # RETRIEVAL
     # Get just the scores and indices of top related results
-    t5 = time.time()
+    # t5 = time.time()
     embeddings = torch.load('./ragapp/embeddings1.pt')
-    print(f"[TIMING] torch.load: {time.time() - t5:.2f}s")
+    # print(f"[TIMING] torch.load: {time.time() - t5:.2f}s")
     scores, indices = retrieve_relevant_resources(query=query,
                                                   embeddings=embeddings)
 
     # Create a list of context items
     pages_and_chunks_save_path_pickle = "./ragapp/pages_and_chunks1.pkl"
-    t6 = time.time()
+    # t6 = time.time()
     with open(pages_and_chunks_save_path_pickle, "rb") as f:
         pages_and_chunks = pickle.load(f)
     context_items = [pages_and_chunks[i] for i in indices] 
-    print(f"[TIMING] pickle and iteration: {time.time() - t6:.2f}s")
+    # print(f"[TIMING] pickle and iteration: {time.time() - t6:.2f}s")
 
     # Add score to context item
-    t7 = time.time()
+    # t7 = time.time()
     for i, item in enumerate(context_items): 
         item["score"] = scores[i].cpu()
-    print(f"[TIMING] Add score to context item: {time.time() - t7:.2f}s")
+    # print(f"[TIMING] Add score to context item: {time.time() - t7:.2f}s")
 
     # AUGMENTATION
     # Create the prompt and format it with context items
-    t8 = time.time()
+    # t8 = time.time()
     prompt = prompt_formatter(query=query,
                               context_items=context_items)
-    print(f"[TIMING] Create the prompt and format it with context items: {time.time() - t8:.2f}s.  {os.cpu_count()}")
+    # print(f"[TIMING] Create the prompt and format it with context items: {time.time() - t8:.2f}s.  {os.cpu_count()}")
     return glm(prompt)
