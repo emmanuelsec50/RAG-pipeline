@@ -1,3 +1,4 @@
+import json
 import sys
 
 import torch
@@ -106,7 +107,7 @@ def print_top_results_and_scores(query: str,
                                                   n_resources_to_return=n_resources_to_return)
 
 
-    pages_and_chunks_save_path_pickle = "pages_and_chunks1.pkl"
+    pages_and_chunks_save_path_pickle = "./ragapp/pages_and_chunks1.pkl"
     with open(pages_and_chunks_save_path_pickle, "rb") as f:
         pages_and_chunks = pickle.load(f)
 
@@ -119,36 +120,36 @@ def print_top_results_and_scores(query: str,
         print("\n")
 
 def glm(prompt: str):
-  client = OpenAI(
-  base_url = "https://integrate.api.nvidia.com/v1",
-  api_key = config("GLM_API_KEY")
-  )
+    client = OpenAI(
+        base_url="https://integrate.api.nvidia.com/v1",
+        api_key=config("GLM_API_KEY")
+    )
+    completion = client.chat.completions.create(
+        model="z-ai/glm-5.2",
+        messages=[{'role': 'user', 'content': prompt}],
+        temperature=0.78,
+        top_p=0.81,
+        max_tokens=16384,
+        seed=42,
+        extra_body={"chat_template_kwargs": {"enable_thinking": True, "clear_thinking": False}},
+        stream=True
+    )
 
-  _USE_COLOR = sys.stdout.isatty() and os.getenv("NO_COLOR") is None
-  _REASONING_COLOR = "\033[90m" if _USE_COLOR else ""
-  _RESET_COLOR = "\033[0m" if _USE_COLOR else ""
-  completion = client.chat.completions.create(
-    model="z-ai/glm-5.2",
-    messages=[{ 'role': 'user', 'content': prompt}],
-    temperature=0.78,
-    top_p=0.81,
-    max_tokens=16384,
-    seed=42,
-    extra_body={"chat_template_kwargs":{"enable_thinking":True,"clear_thinking":False}},
-    stream=True
-  )
+    for chunk in completion:
+        if not getattr(chunk, "choices", None):
+            continue
+        if len(chunk.choices) == 0 or getattr(chunk.choices[0], "delta", None) is None:
+            continue
+        delta = chunk.choices[0].delta
+        reasoning = getattr(delta, "reasoning_content", None)
+        content = getattr(delta, "content", None)
 
-  for chunk in completion:
-    if not getattr(chunk, "choices", None):
-      continue
-    if len(chunk.choices) == 0 or getattr(chunk.choices[0], "delta", None) is None:
-      continue
-    delta = chunk.choices[0].delta
-    reasoning = getattr(delta, "reasoning_content", None)
-    if reasoning:
-      print(f"{_REASONING_COLOR}{reasoning}{_RESET_COLOR}", end="")
-    if getattr(delta, "content", None) is not None:
-      print(delta.content, end="")
+        if reasoning:
+            yield f"data: {json.dumps({'type': 'reasoning', 'text': reasoning})}\n\n"
+        if content:
+            yield f"data: {json.dumps({'type': 'content', 'text': content})}\n\n"
+
+    yield "data: [DONE]\n\n"
 
 def ask(query: str,
         temperature: float=0.7,
@@ -162,12 +163,12 @@ def ask(query: str,
     # RETRIEVAL
     # Get just the scores and indices of top related results
 
-    embeddings = torch.load('embeddings1.pt')
+    embeddings = torch.load('./ragapp/embeddings1.pt')
     scores, indices = retrieve_relevant_resources(query=query,
                                                   embeddings=embeddings)
 
     # Create a list of context items
-    pages_and_chunks_save_path_pickle = "pages_and_chunks1.pkl"
+    pages_and_chunks_save_path_pickle = "./ragapp/pages_and_chunks1.pkl"
     with open(pages_and_chunks_save_path_pickle, "rb") as f:
         pages_and_chunks = pickle.load(f)
     context_items = [pages_and_chunks[i] for i in indices] 
@@ -181,15 +182,4 @@ def ask(query: str,
     prompt = prompt_formatter(query=query,
                               context_items=context_items)
     
-
-    # print(f'''
-    #     {prompt}
-    #     '''
-    # )
-
-    glm(prompt)
-
-
-
-
-    return None
+    return glm(prompt)

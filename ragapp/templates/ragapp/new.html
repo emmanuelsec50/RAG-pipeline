@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>RAG Query</title>
+<style>
+  :root {
+    --bg: #0b0d0c;
+    --panel: #131614;
+    --border: #232823;
+    --text: #e8ede9;
+    --text-dim: #8a938c;
+    --accent: #4fd67a;
+    --accent-dim: #2a5c3d;
+    --reasoning: #6b746e;
+    --mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+    --sans: 'Inter', -apple-system, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 40px 20px;
+  }
+
+  .app {
+    width: 100%;
+    max-width: 720px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 12px;
+  }
+
+  .header h1 {
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin: 0;
+    color: var(--text);
+  }
+
+  .header .status {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+
+  .status.live { color: var(--accent); }
+
+  .status-dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--text-dim);
+    margin-right: 6px;
+  }
+
+  .status.live .status-dot {
+    background: var(--accent);
+    box-shadow: 0 0 6px var(--accent);
+  }
+
+  form {
+    display: flex;
+    gap: 8px;
+  }
+
+  textarea {
+    flex: 1;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    padding: 12px 14px;
+    border-radius: 6px;
+    resize: none;
+    height: 44px;
+    line-height: 1.4;
+    transition: border-color 0.15s;
+  }
+
+  textarea:focus {
+    outline: none;
+    border-color: var(--accent-dim);
+  }
+
+  button {
+    background: var(--accent);
+    color: #06140b;
+    border: none;
+    font-family: var(--sans);
+    font-weight: 600;
+    font-size: 13px;
+    padding: 0 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+
+  button:hover { opacity: 0.85; }
+  button:disabled {
+    background: var(--border);
+    color: var(--text-dim);
+    cursor: not-allowed;
+  }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    display: none;
+  }
+
+  .panel.visible { display: block; }
+
+  .reasoning-block {
+    border-bottom: 1px solid var(--border);
+  }
+
+  .reasoning-toggle {
+    width: 100%;
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    font-family: var(--mono);
+    font-size: 11px;
+    text-align: left;
+    padding: 10px 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-radius: 0;
+  }
+
+  .reasoning-toggle:hover { color: var(--text); background: none; opacity: 1; }
+
+  .reasoning-toggle .chevron {
+    transition: transform 0.15s;
+    font-size: 9px;
+  }
+
+  .reasoning-toggle.open .chevron { transform: rotate(90deg); }
+
+  .reasoning-body {
+    display: none;
+    padding: 0 16px 14px;
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--reasoning);
+    white-space: pre-wrap;
+    max-height: 200px;
+    overflow-y: auto;
+  }
+
+  .reasoning-body.open { display: block; }
+
+  .answer-body {
+    padding: 18px 20px;
+    font-size: 14px;
+    line-height: 1.7;
+    white-space: pre-wrap;
+  }
+
+  .cursor {
+    display: inline-block;
+    width: 7px;
+    height: 14px;
+    background: var(--accent);
+    margin-left: 2px;
+    vertical-align: text-bottom;
+    animation: blink 1s step-start infinite;
+  }
+
+  @keyframes blink { 50% { opacity: 0; } }
+
+  .empty-state {
+    color: var(--text-dim);
+    font-size: 13px;
+    padding: 24px 0;
+    text-align: center;
+  }
+
+  .error-state {
+    color: #e85d5d;
+    font-size: 13px;
+    padding: 14px 16px;
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="header">
+    <h1>RAG Query</h1>
+    <span class="status" id="status"><span class="status-dot"></span><span id="statusText">Idle</span></span>
+  </div>
+
+  <form id="queryForm">
+    <textarea id="prompt" placeholder="Ask something..." required></textarea>
+    <button type="submit" id="submitBtn">Ask</button>
+  </form>
+
+  <div class="empty-state" id="emptyState">No query yet. Ask something to see a streamed answer.</div>
+
+  <div class="panel" id="panel">
+    <div class="reasoning-block" id="reasoningBlock" style="display:none;">
+      <button type="button" class="reasoning-toggle" id="reasoningToggle">
+        <span class="chevron">▶</span>
+        <span id="reasoningLabel">Reasoning</span>
+      </button>
+      <div class="reasoning-body" id="reasoningBody"></div>
+    </div>
+    <div class="answer-body" id="answerBody"></div>
+  </div>
+
+  <div class="error-state" id="errorState" style="display:none;"></div>
+</div>
+
+<script>
+  const form = document.getElementById('queryForm');
+  const promptInput = document.getElementById('prompt');
+  const submitBtn = document.getElementById('submitBtn');
+  const statusEl = document.getElementById('status');
+  const statusText = document.getElementById('statusText');
+  const panel = document.getElementById('panel');
+  const emptyState = document.getElementById('emptyState');
+  const reasoningBlock = document.getElementById('reasoningBlock');
+  const reasoningToggle = document.getElementById('reasoningToggle');
+  const reasoningBody = document.getElementById('reasoningBody');
+  const reasoningLabel = document.getElementById('reasoningLabel');
+  const answerBody = document.getElementById('answerBody');
+  const errorState = document.getElementById('errorState');
+
+  let reasoningChars = 0;
+  let reasoningOpen = false;
+  let userToggledReasoning = false;
+
+  reasoningToggle.addEventListener('click', () => {
+    reasoningOpen = !reasoningOpen;
+    userToggledReasoning = true;
+    reasoningToggle.classList.toggle('open', reasoningOpen);
+    reasoningBody.classList.toggle('open', reasoningOpen);
+  });
+
+  function setStatus(state) {
+    if (state === 'streaming') {
+      statusEl.classList.add('live');
+      statusText.textContent = 'Streaming';
+    } else if (state === 'done') {
+      statusEl.classList.remove('live');
+      statusText.textContent = 'Done';
+    } else if (state === 'error') {
+      statusEl.classList.remove('live');
+      statusText.textContent = 'Error';
+    } else {
+      statusEl.classList.remove('live');
+      statusText.textContent = 'Idle';
+    }
+  }
+
+  function resetPanel() {
+    reasoningChars = 0;
+    reasoningOpen = false;
+    userToggledReasoning = false;
+    reasoningBlock.style.display = 'none';
+    reasoningToggle.classList.remove('open');
+    reasoningBody.classList.remove('open');
+    reasoningBody.textContent = '';
+    reasoningLabel.textContent = 'Reasoning';
+    answerBody.innerHTML = '';
+    errorState.style.display = 'none';
+    errorState.textContent = '';
+  }
+
+  function appendCursor() {
+    const cursor = document.createElement('span');
+    cursor.className = 'cursor';
+    cursor.id = 'cursor';
+    answerBody.appendChild(cursor);
+  }
+
+  function removeCursor() {
+    const c = document.getElementById('cursor');
+    if (c) c.remove();
+  }
+
+  function getCookie(name) {
+    const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+    return match ? decodeURIComponent(match[2]) : '';
+  }
+
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const prompt = promptInput.value.trim();
+    if (!prompt) return;
+
+    submitBtn.disabled = true;
+    emptyState.style.display = 'none';
+    panel.classList.add('visible');
+    resetPanel();
+    setStatus('streaming');
+    appendCursor();
+
+    try {
+      const response = await fetch('/api/query/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({ prompt })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Server responded with ${response.status}`);
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n\n');
+        buffer = lines.pop();
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const payload = line.slice(6);
+          if (payload === '[DONE]') continue;
+
+          let parsed;
+          try {
+            parsed = JSON.parse(payload);
+          } catch {
+            continue;
+          }
+
+          if (parsed.type === 'reasoning') {
+            reasoningBlock.style.display = 'block';
+            reasoningChars += parsed.text.length;
+            reasoningLabel.textContent = `Reasoning (${reasoningChars} chars)`;
+            reasoningBody.textContent += parsed.text;
+            if (!userToggledReasoning) {
+              reasoningBody.scrollTop = reasoningBody.scrollHeight;
+            }
+          } else if (parsed.type === 'content') {
+            removeCursor();
+            answerBody.append(parsed.text);
+            appendCursor();
+          } else if (parsed.type === 'error') {
+            throw new Error(parsed.text || 'Unknown stream error');
+          }
+        }
+      }
+
+      removeCursor();
+      setStatus('done');
+
+    } catch (err) {
+      removeCursor();
+      setStatus('error');
+      errorState.style.display = 'block';
+      errorState.textContent = `Something went wrong: ${err.message}. Try again.`;
+    } finally {
+      submitBtn.disabled = false;
+    }
+  });
+
+  promptInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      form.requestSubmit();
+    }
+  });
+</script>
+
+</body>
+</html>
