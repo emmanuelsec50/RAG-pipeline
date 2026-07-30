@@ -2,190 +2,335 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>RAG Query</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Vixxon AI</title>
 <style>
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
   :root {
-    --bg: #0b0d0c;
-    --panel: #131614;
+    --bg: #0b0e0c;
+    --bg-elevated: #141814;
+    --panel: #10130f;
     --border: #232823;
+    --border-soft: #1a1e1a;
     --text: #e8ede9;
-    --text-dim: #8a938c;
-    --accent: #4fd67a;
-    --accent-dim: #2a5c3d;
-    --reasoning: #6b746e;
-    --mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+    --text-dim: #838d86;
+    --text-faint: #4d554e;
+    --accent: #3ee85a;
+    --accent-dim: #1f6b2f;
+    --accent-wash: rgba(62, 232, 90, 0.08);
+    --user-bubble: #1c2a1e;
+    --reasoning: #6b756d;
+    --error: #e8615d;
+    --mono: 'JetBrains Mono', Consolas, monospace;
     --sans: 'Inter', -apple-system, sans-serif;
+    --display: 'Syne', sans-serif;
+    --shadow: 0 8px 24px rgba(0,0,0,0.35);
+  }
+
+  [data-theme="light"] {
+    --bg: #f3f5f1;
+    --bg-elevated: #ffffff;
+    --panel: #ffffff;
+    --border: #dde2dc;
+    --border-soft: #e6ebe3;
+    --text: #171a17;
+    --text-dim: #666e68;
+    --text-faint: #9aa39c;
+    --accent: #1f9e3a;
+    --accent-dim: #b8ecc3;
+    --accent-wash: rgba(31, 158, 58, 0.07);
+    --user-bubble: #e3f5e6;
+    --reasoning: #7c857e;
+    --error: #c73c38;
+    --shadow: 0 8px 24px rgba(0,0,0,0.06);
   }
 
   * { box-sizing: border-box; }
 
-  body {
+  html, body {
+    height: 100%;
     margin: 0;
+  }
+
+  body {
     background: var(--bg);
     color: var(--text);
     font-family: var(--sans);
-    min-height: 100vh;
     display: flex;
     justify-content: center;
-    padding: 40px 20px;
+    transition: background 0.2s ease, color 0.2s ease;
   }
 
-  .app {
+  .shell {
     width: 100%;
-    max-width: 720px;
+    max-width: 760px;
+    height: 100vh;
     display: flex;
     flex-direction: column;
-    gap: 16px;
   }
 
+  /* ---------- HEADER ---------- */
   .header {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     justify-content: space-between;
-    border-bottom: 1px solid var(--border);
-    padding-bottom: 12px;
+    padding: 18px 22px;
+    border-bottom: 1px solid var(--border-soft);
+    flex-shrink: 0;
   }
 
-  .header h1 {
-    font-size: 15px;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    margin: 0;
-    color: var(--text);
-  }
-
-  .header .status {
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--text-dim);
-  }
-
-  .status.live { color: var(--accent); }
-
-  .status-dot {
-    display: inline-block;
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--text-dim);
-    margin-right: 6px;
-  }
-
-  .status.live .status-dot {
-    background: var(--accent);
-    box-shadow: 0 0 6px var(--accent);
-  }
-
-  form {
+  .brand {
     display: flex;
-    gap: 8px;
+    flex-direction: column;
+    gap: 4px;
   }
 
-  textarea {
-    flex: 1;
-    background: var(--panel);
-    border: 1px solid var(--border);
-    color: var(--text);
-    font-family: var(--sans);
+  .brand-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .mark {
+    width: 26px;
+    height: 26px;
+    border-radius: 7px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-dim));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--display);
+    font-weight: 800;
     font-size: 14px;
-    padding: 12px 14px;
-    border-radius: 6px;
-    resize: none;
-    height: 44px;
-    line-height: 1.4;
-    transition: border-color 0.15s;
+    color: #051a09;
+    flex-shrink: 0;
   }
 
-  textarea:focus {
-    outline: none;
-    border-color: var(--accent-dim);
+  .wordmark {
+    font-family: var(--display);
+    font-weight: 800;
+    font-size: 18px;
+    letter-spacing: 0.01em;
   }
 
-  button {
+  .wordmark span {
+    color: var(--accent);
+  }
+
+  .scanline {
+    height: 2px;
+    width: 40px;
+    margin-left: 36px;
+    background: var(--border-soft);
+    border-radius: 2px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .scanline::after {
+    content: '';
+    position: absolute;
+    top: 0; left: -40%;
+    width: 40%;
+    height: 100%;
     background: var(--accent);
-    color: #06140b;
-    border: none;
-    font-family: var(--sans);
-    font-weight: 600;
-    font-size: 13px;
-    padding: 0 20px;
-    border-radius: 6px;
+    opacity: 0;
+  }
+
+  .scanline.active::after {
+    opacity: 1;
+    animation: sweep 1.1s ease-in-out infinite;
+  }
+
+  @keyframes sweep {
+    0%   { left: -40%; }
+    100% { left: 100%; }
+  }
+
+  .header-controls {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .status-label {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: var(--text-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .status-label.live { color: var(--accent); }
+
+  .theme-toggle {
+    width: 40px;
+    height: 24px;
+    border-radius: 12px;
+    background: var(--border-soft);
+    border: 1px solid var(--border);
+    position: relative;
     cursor: pointer;
-    transition: opacity 0.15s;
+    flex-shrink: 0;
   }
 
-  button:hover { opacity: 0.85; }
-  button:disabled {
-    background: var(--border);
+  .theme-toggle .knob {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--accent);
+    transition: transform 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+  }
+
+  [data-theme="light"] .theme-toggle .knob {
+    transform: translateX(16px);
+  }
+
+  /* ---------- THREAD ---------- */
+  .thread {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .empty {
+    margin: auto;
+    text-align: center;
+    color: var(--text-faint);
+    max-width: 320px;
+  }
+
+  .empty .mark {
+    width: 44px;
+    height: 44px;
+    font-size: 22px;
+    border-radius: 12px;
+    margin: 0 auto 16px;
+  }
+
+  .empty h2 {
+    font-family: var(--display);
+    font-size: 16px;
     color: var(--text-dim);
-    cursor: not-allowed;
+    margin: 0 0 6px;
   }
 
-  .panel {
+  .empty p {
+    font-size: 13px;
+    line-height: 1.6;
+    margin: 0;
+  }
+
+  .msg {
+    display: flex;
+    flex-direction: column;
+    max-width: 82%;
+    animation: rise 0.25s ease;
+  }
+
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .msg.user {
+    align-self: flex-end;
+    align-items: flex-end;
+  }
+
+  .msg.assistant {
+    align-self: flex-start;
+    align-items: flex-start;
+  }
+
+  .msg .label {
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-faint);
+    margin-bottom: 6px;
+    padding: 0 4px;
+  }
+
+  .bubble {
+    border-radius: 14px;
+    padding: 12px 16px;
+    font-size: 14.5px;
+    line-height: 1.65;
+    white-space: pre-wrap;
+  }
+
+  .msg.user .bubble {
+    background: var(--user-bubble);
+    border: 1px solid var(--accent-dim);
+    border-bottom-right-radius: 4px;
+  }
+
+  .msg.assistant .bubble {
     background: var(--panel);
     border: 1px solid var(--border);
-    border-radius: 8px;
-    overflow: hidden;
-    display: none;
-  }
-
-  .panel.visible { display: block; }
-
-  .reasoning-block {
-    border-bottom: 1px solid var(--border);
+    border-bottom-left-radius: 4px;
+    width: 100%;
   }
 
   .reasoning-toggle {
-    width: 100%;
-    background: none;
-    border: none;
-    color: var(--text-dim);
-    font-family: var(--mono);
-    font-size: 11px;
-    text-align: left;
-    padding: 10px 16px;
-    cursor: pointer;
     display: flex;
     align-items: center;
-    gap: 8px;
-    border-radius: 0;
+    gap: 6px;
+    background: none;
+    border: none;
+    color: var(--text-faint);
+    font-family: var(--mono);
+    font-size: 11px;
+    cursor: pointer;
+    padding: 0 0 10px;
+    width: 100%;
+    text-align: left;
   }
 
-  .reasoning-toggle:hover { color: var(--text); background: none; opacity: 1; }
+  .reasoning-toggle:hover { color: var(--text-dim); }
 
-  .reasoning-toggle .chevron {
+  .reasoning-toggle .chev {
+    font-size: 8px;
     transition: transform 0.15s;
-    font-size: 9px;
   }
 
-  .reasoning-toggle.open .chevron { transform: rotate(90deg); }
+  .reasoning-toggle.open .chev { transform: rotate(90deg); }
 
   .reasoning-body {
     display: none;
-    padding: 0 16px 14px;
     font-family: var(--mono);
-    font-size: 12px;
+    font-size: 11.5px;
     line-height: 1.6;
     color: var(--reasoning);
-    white-space: pre-wrap;
-    max-height: 200px;
+    background: var(--accent-wash);
+    border-left: 2px solid var(--accent-dim);
+    padding: 10px 12px;
+    margin-bottom: 12px;
+    border-radius: 4px;
+    max-height: 220px;
     overflow-y: auto;
+    white-space: pre-wrap;
   }
 
   .reasoning-body.open { display: block; }
 
-  .answer-body {
-    padding: 18px 20px;
-    font-size: 14px;
-    line-height: 1.7;
-    white-space: pre-wrap;
-  }
-
   .cursor {
     display: inline-block;
-    width: 7px;
-    height: 14px;
+    width: 6px;
+    height: 13px;
     background: var(--accent);
     margin-left: 2px;
     vertical-align: text-bottom;
@@ -194,134 +339,292 @@
 
   @keyframes blink { 50% { opacity: 0; } }
 
-  .empty-state {
-    color: var(--text-dim);
+  .error-bubble {
+    color: var(--error);
     font-size: 13px;
-    padding: 24px 0;
+    background: color-mix(in srgb, var(--error) 8%, transparent);
+    border: 1px solid color-mix(in srgb, var(--error) 30%, transparent);
+    border-radius: 10px;
+    padding: 10px 14px;
+  }
+
+  /* ---------- INPUT ---------- */
+  .input-bar {
+    border-top: 1px solid var(--border-soft);
+    padding: 14px 22px 20px;
+    flex-shrink: 0;
+  }
+
+  form {
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 8px 8px 8px 16px;
+    transition: border-color 0.15s;
+  }
+
+  form:focus-within {
+    border-color: var(--accent-dim);
+  }
+
+  textarea {
+    flex: 1;
+    background: none;
+    border: none;
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    resize: none;
+    height: 22px;
+    max-height: 120px;
+    line-height: 1.5;
+    padding: 6px 0;
+  }
+
+  textarea:focus { outline: none; }
+  textarea::placeholder { color: var(--text-faint); }
+
+  button {
+    background: var(--accent);
+    color: #051a09;
+    border: none;
+    font-family: var(--sans);
+    font-weight: 600;
+    font-size: 13px;
+    padding: 9px 18px;
+    border-radius: 8px;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: opacity 0.15s;
+  }
+
+  button:hover { opacity: 0.88; }
+  button:disabled {
+    background: var(--border);
+    color: var(--text-faint);
+    cursor: not-allowed;
+  }
+
+  .hint {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-faint);
     text-align: center;
+    margin-top: 10px;
+    letter-spacing: 0.02em;
   }
 
-  .error-state {
-    color: #e85d5d;
-    font-size: 13px;
-    padding: 14px 16px;
-  }
-</style>
-</head>
-<body>
+  ::-webkit-scrollbar { width: 8px; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
 
-<div class="app">
-  <div class="header">
-    <h1>RAG Query</h1>
-    <span class="status" id="status"><span class="status-dot"></span><span id="statusText">Idle</span></span>
-  </div>
+  /* ---------- MOBILE ---------- */
+  @media (max-width: 480px) {
+    .header {
+      padding: 14px 16px;
+    }
 
-  <form id="queryForm">
-    <textarea id="prompt" placeholder="Ask something..." required></textarea>
-    <button type="submit" id="submitBtn">Ask</button>
-  </form>
+    .scanline {
+      margin-left: 0;
+      margin-top: 6px;
+    }
 
-  <div class="empty-state" id="emptyState">No query yet. Ask something to see a streamed answer.</div>
+    .brand-row { gap: 8px; }
 
-  <div class="panel" id="panel">
-    <div class="reasoning-block" id="reasoningBlock" style="display:none;">
-      <button type="button" class="reasoning-toggle" id="reasoningToggle">
-        <span class="chevron">▶</span>
-        <span id="reasoningLabel">Reasoning</span>
-      </button>
-      <div class="reasoning-body" id="reasoningBody"></div>
-    </div>
-    <div class="answer-body" id="answerBody"></div>
-  </div>
+    .wordmark { font-size: 16px; }
 
-  <div class="error-state" id="errorState" style="display:none;"></div>
-</div>
+    .thread {
+      padding: 18px 16px;
+    }
 
-<script>
-  const form = document.getElementById('queryForm');
-  const promptInput = document.getElementById('prompt');
-  const submitBtn = document.getElementById('submitBtn');
-  const statusEl = document.getElementById('status');
-  const statusText = document.getElementById('statusText');
-  const panel = document.getElementById('panel');
-  const emptyState = document.getElementById('emptyState');
-  const reasoningBlock = document.getElementById('reasoningBlock');
-  const reasoningToggle = document.getElementById('reasoningToggle');
-  const reasoningBody = document.getElementById('reasoningBody');
-  const reasoningLabel = document.getElementById('reasoningLabel');
-  const answerBody = document.getElementById('answerBody');
-  const errorState = document.getElementById('errorState');
+    .msg { max-width: 90%; }
 
-  let reasoningChars = 0;
-  let reasoningOpen = false;
-  let userToggledReasoning = false;
+    .input-bar {
+      padding: 12px 14px calc(16px + env(safe-area-inset-bottom));
+    }
 
-  reasoningToggle.addEventListener('click', () => {
-    reasoningOpen = !reasoningOpen;
-    userToggledReasoning = true;
-    reasoningToggle.classList.toggle('open', reasoningOpen);
-    reasoningBody.classList.toggle('open', reasoningOpen);
-  });
+    form { padding: 6px 6px 6px 14px; }
 
-  function setStatus(state) {
-    if (state === 'streaming') {
-      statusEl.classList.add('live');
-      statusText.textContent = 'Streaming';
-    } else if (state === 'done') {
-      statusEl.classList.remove('live');
-      statusText.textContent = 'Done';
-    } else if (state === 'error') {
-      statusEl.classList.remove('live');
-      statusText.textContent = 'Error';
-    } else {
-      statusEl.classList.remove('live');
-      statusText.textContent = 'Idle';
+    button {
+      padding: 10px 16px;
+      font-size: 13px;
+    }
+
+    /* Prevent iOS auto-zoom on focus: font-size must be >=16px */
+    textarea {
+      font-size: 16px;
+    }
+
+    .theme-toggle {
+      width: 44px;
+      height: 26px;
+    }
+
+    .theme-toggle .knob {
+      width: 20px;
+      height: 20px;
+    }
+
+    [data-theme="light"] .theme-toggle .knob {
+      transform: translateX(18px);
     }
   }
 
-  function resetPanel() {
-    reasoningChars = 0;
-    reasoningOpen = false;
-    userToggledReasoning = false;
-    reasoningBlock.style.display = 'none';
-    reasoningToggle.classList.remove('open');
-    reasoningBody.classList.remove('open');
-    reasoningBody.textContent = '';
-    reasoningLabel.textContent = 'Reasoning';
-    answerBody.innerHTML = '';
-    errorState.style.display = 'none';
-    errorState.textContent = '';
+  @media (max-width: 360px) {
+    .status-label { display: none; }
   }
+</style>
+</head>
+<body data-theme="dark">
 
-  function appendCursor() {
-    const cursor = document.createElement('span');
-    cursor.className = 'cursor';
-    cursor.id = 'cursor';
-    answerBody.appendChild(cursor);
-  }
+<div class="shell">
 
-  function removeCursor() {
-    const c = document.getElementById('cursor');
-    if (c) c.remove();
-  }
+  <div class="header">
+    <div class="brand">
+      <div class="brand-row">
+        <div class="mark">V</div>
+        <div class="wordmark">VIXXON <span>AI</span></div>
+      </div>
+      <div class="scanline" id="scanline"></div>
+    </div>
+    <div class="header-controls">
+      <span class="status-label" id="statusLabel">IDLE</span>
+      <div class="theme-toggle" id="themeToggle" role="button" aria-label="Toggle theme">
+        <div class="knob"><span id="knobIcon">☾</span></div>
+      </div>
+    </div>
+  </div>
 
+  <div class="thread" id="thread">
+    <div class="empty" id="emptyState">
+      <div class="mark">V</div>
+      <h2>Ask Vixxon AI anything</h2>
+      <p>Grounded in your knowledge base — ask a question to get started.</p>
+    </div>
+  </div>
+
+  <div class="input-bar">
+    <form id="queryForm">
+      <textarea id="prompt" placeholder="Message Vixxon AI..." required rows="1"></textarea>
+      <button type="submit" id="submitBtn">Send</button>
+    </form>
+    <div class="hint">Enter to send · Shift + Enter for a new line</div>
+  </div>
+
+</div>
+
+<script>
+  const thread = document.getElementById('thread');
+  const emptyState = document.getElementById('emptyState');
+  const form = document.getElementById('queryForm');
+  const promptInput = document.getElementById('prompt');
+  const submitBtn = document.getElementById('submitBtn');
+  const statusLabel = document.getElementById('statusLabel');
+  const scanline = document.getElementById('scanline');
+  const themeToggle = document.getElementById('themeToggle');
+  const knobIcon = document.getElementById('knobIcon');
+
+  // ---------- Theme ----------
+  let theme = 'dark';
+  themeToggle.addEventListener('click', () => {
+    theme = theme === 'dark' ? 'light' : 'dark';
+    document.body.setAttribute('data-theme', theme);
+    knobIcon.textContent = theme === 'dark' ? '☾' : '☀';
+  });
+
+  // ---------- Helpers ----------
   function getCookie(name) {
     const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
     return match ? decodeURIComponent(match[2]) : '';
   }
 
+  function autoGrow() {
+    promptInput.style.height = '22px';
+    promptInput.style.height = Math.min(promptInput.scrollHeight, 120) + 'px';
+  }
+  promptInput.addEventListener('input', autoGrow);
 
+  function scrollToBottom() {
+    thread.scrollTop = thread.scrollHeight;
+  }
+
+  function setStreaming(isStreaming) {
+    statusLabel.textContent = isStreaming ? 'GENERATING' : 'IDLE';
+    statusLabel.classList.toggle('live', isStreaming);
+    scanline.classList.toggle('active', isStreaming);
+    submitBtn.disabled = isStreaming;
+  }
+
+  function addUserMessage(text) {
+    const msg = document.createElement('div');
+    msg.className = 'msg user';
+    msg.innerHTML = `
+      <div class="label">You</div>
+      <div class="bubble"></div>
+    `;
+    msg.querySelector('.bubble').textContent = text;
+    thread.appendChild(msg);
+    scrollToBottom();
+  }
+
+  function createAssistantMessage() {
+    const msg = document.createElement('div');
+    msg.className = 'msg assistant';
+    msg.innerHTML = `
+      <div class="label">Vixxon AI</div>
+      <div class="bubble">
+        <button type="button" class="reasoning-toggle" style="display:none;">
+          <span class="chev">▶</span><span class="r-label">Reasoning</span>
+        </button>
+        <div class="reasoning-body"></div>
+        <div class="answer"></div>
+      </div>
+    `;
+    thread.appendChild(msg);
+    scrollToBottom();
+
+    const reasoningToggle = msg.querySelector('.reasoning-toggle');
+    const reasoningBody = msg.querySelector('.reasoning-body');
+    let reasoningOpen = false;
+    let userToggled = false;
+
+    reasoningToggle.addEventListener('click', () => {
+      reasoningOpen = !reasoningOpen;
+      userToggled = true;
+      reasoningToggle.classList.toggle('open', reasoningOpen);
+      reasoningBody.classList.toggle('open', reasoningOpen);
+    });
+
+    return {
+      answerEl: msg.querySelector('.answer'),
+      reasoningToggle,
+      reasoningBody,
+      rLabel: msg.querySelector('.r-label'),
+      get userToggled() { return userToggled; }
+    };
+  }
+
+  // ---------- Submit ----------
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const prompt = promptInput.value.trim();
     if (!prompt) return;
 
-    submitBtn.disabled = true;
     emptyState.style.display = 'none';
-    panel.classList.add('visible');
-    resetPanel();
-    setStatus('streaming');
-    appendCursor();
+    addUserMessage(prompt);
+    promptInput.value = '';
+    autoGrow();
+
+    const refs = createAssistantMessage();
+    let reasoningChars = 0;
+    let cursorSpan = document.createElement('span');
+    cursorSpan.className = 'cursor';
+    refs.answerEl.appendChild(cursorSpan);
+
+    setStreaming(true);
 
     try {
       const response = await fetch('/api/query/', {
@@ -334,9 +637,7 @@
         body: JSON.stringify({ prompt })
       });
 
-      if (!response.ok) {
-        throw new Error(`Server responded with ${response.status}`);
-      }
+      if (!response.ok) throw new Error(`Server responded with ${response.status}`);
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
@@ -356,40 +657,36 @@
           if (payload === '[DONE]') continue;
 
           let parsed;
-          try {
-            parsed = JSON.parse(payload);
-          } catch {
-            continue;
-          }
+          try { parsed = JSON.parse(payload); } catch { continue; }
 
           if (parsed.type === 'reasoning') {
-            reasoningBlock.style.display = 'block';
+            refs.reasoningToggle.style.display = 'flex';
             reasoningChars += parsed.text.length;
-            reasoningLabel.textContent = `Reasoning (${reasoningChars} chars)`;
-            reasoningBody.textContent += parsed.text;
-            if (!userToggledReasoning) {
-              reasoningBody.scrollTop = reasoningBody.scrollHeight;
-            }
+            refs.rLabel.textContent = `Reasoning (${reasoningChars} chars)`;
+            refs.reasoningBody.textContent += parsed.text;
+            if (!refs.userToggled) refs.reasoningBody.scrollTop = refs.reasoningBody.scrollHeight;
           } else if (parsed.type === 'content') {
-            removeCursor();
-            answerBody.append(parsed.text);
-            appendCursor();
+            cursorSpan.remove();
+            refs.answerEl.append(parsed.text);
+            refs.answerEl.appendChild(cursorSpan);
+            scrollToBottom();
           } else if (parsed.type === 'error') {
             throw new Error(parsed.text || 'Unknown stream error');
           }
         }
       }
 
-      removeCursor();
-      setStatus('done');
+      cursorSpan.remove();
+      setStreaming(false);
 
     } catch (err) {
-      removeCursor();
-      setStatus('error');
-      errorState.style.display = 'block';
-      errorState.textContent = `Something went wrong: ${err.message}. Try again.`;
-    } finally {
-      submitBtn.disabled = false;
+      cursorSpan.remove();
+      setStreaming(false);
+      statusLabel.textContent = 'ERROR';
+      const errBubble = document.createElement('div');
+      errBubble.className = 'error-bubble';
+      errBubble.textContent = `Something went wrong: ${err.message}. Try again.`;
+      refs.answerEl.parentElement.appendChild(errBubble);
     }
   });
 
