@@ -10,6 +10,7 @@ cuda-pathfinder==1.6.0
 cuda-toolkit==13.0.3.0
 distro==1.9.0
 Django==6.0.7
+django-ratelimit==4.1.0
 filelock==3.32.0
 fsspec==2026.6.0
 h11==0.16.0
@@ -48,6 +49,7 @@ packaging==26.2
 pydantic==2.13.4
 pydantic_core==2.46.4
 Pygments==2.20.0
+python-decouple==3.8
 PyYAML==6.0.3
 regex==2026.7.19
 requests==2.34.2
