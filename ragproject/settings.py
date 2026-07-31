@@ -25,9 +25,11 @@ SECRET_KEY = config('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = ['.onrender.com']
+ALLOWED_HOSTS = ['rag-pipeline-cdf8.onrender.com']
 
-
+CSRF_TRUSTED_ORIGINS = [
+    "https://rag-pipeline-cdf8.onrender.com",
+]
 # Application definition
 
 INSTALLED_APPS = [
