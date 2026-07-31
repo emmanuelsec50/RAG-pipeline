@@ -5,7 +5,6 @@ import torch
 import os
 import requests
 from openai import OpenAI
-from sentence_transformers import util
 import textwrap
 import pickle
 from decouple import config
@@ -87,7 +86,7 @@ def retrieve_relevant_resources(query: str,
 
     # Get dot product scores on embeddings
     
-    dot_scores = util.dot_score(query_embedding, embeddings)[0]
+    dot_scores = dot_score(query_embedding, embeddings)[0]
     
 
     # if print_time:
@@ -192,3 +191,25 @@ def ask(query: str,
                               context_items=context_items)
     # print(f"[TIMING] Create the prompt and format it with context items: {time.time() - t8:.2f}s.  {os.cpu_count()}")
     return glm(prompt)
+
+
+
+def dot_score(a, b):
+    a = torch.as_tensor(a, dtype=torch.float32)
+    b = torch.as_tensor(b, dtype=torch.float32)
+    if a.dim() == 1:
+        a = a.unsqueeze(0)
+    if b.dim() == 1:
+        b = b.unsqueeze(0)
+    return torch.mm(a, b.transpose(0, 1))
+
+def cos_sim(a, b):
+    a = torch.as_tensor(a, dtype=torch.float32)
+    b = torch.as_tensor(b, dtype=torch.float32)
+    if a.dim() == 1:
+        a = a.unsqueeze(0)
+    if b.dim() == 1:
+        b = b.unsqueeze(0)
+    a_norm = torch.nn.functional.normalize(a, p=2, dim=1)
+    b_norm = torch.nn.functional.normalize(b, p=2, dim=1)
+    return torch.mm(a_norm, b_norm.transpose(0, 1))
