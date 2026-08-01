@@ -508,6 +508,7 @@
 
   <div class="input-bar">
     <form id="queryForm">
+      {% csrf_token %}
       <textarea id="prompt" placeholder="Message Vixxon AI..." required rows="1"></textarea>
       <button type="submit" id="submitBtn">Send</button>
     </form>
