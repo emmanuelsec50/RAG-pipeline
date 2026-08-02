@@ -4,20 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Vixxon AI</title>
-
-<!-- Open Graph -->
-<meta property="og:title" content="Vixxon AI">
-<meta property="og:description" content="Ask Vixxon AI anything — grounded, streaming answers powered by your knowledge base.">
-<meta property="og:image" content="https://ai.vixxon.online/static/og-image.png">
-<meta property="og:url" content="https://ai.vixxon.online/">
-<meta property="og:type" content="website">
-<meta property="og:site_name" content="Vixxon AI">
-
-<!-- Twitter Card -->
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Vixxon AI">
-<meta name="twitter:description" content="Ask Vixxon AI anything — grounded, streaming answers powered by your knowledge base.">
-<meta name="twitter:image" content="https://ai.vixxon.online/static/og-image.png">
 <meta name="description" content="Vixxon AI — ask questions and get instant, grounded answers powered by retrieval-augmented generation.">
 
 <!-- Open Graph / Facebook, WhatsApp, LinkedIn, Discord -->
@@ -25,7 +11,7 @@
 <meta property="og:url" content="https://ai.vixxon.online/">
 <meta property="og:title" content="Vixxon AI">
 <meta property="og:description" content="Ask questions and get instant, grounded answers powered by retrieval-augmented generation.">
-<meta property="og:image" content="https://media.vixxon.online/vixon.png">
+<meta property="og:image" content="https://media.vixxon.online/vixon.png>
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:site_name" content="Vixxon AI">
@@ -35,6 +21,9 @@
 <meta name="twitter:title" content="Vixxon AI">
 <meta name="twitter:description" content="Ask questions and get instant, grounded answers powered by retrieval-augmented generation.">
 <meta name="twitter:image" content="https://media.vixxon.online/vixon.png">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
 
 <!-- Favicon -->
 <link rel="icon" type="image/png" href="https://media.vixxon.online/vixon.png">
@@ -387,6 +376,50 @@
   }
 
   .reasoning-body.open { display: block; }
+
+  .answer {
+    font-size: 14px;
+    line-height: 1.7;
+  }
+
+  .answer strong { color: var(--text); font-weight: 600; }
+  .answer em { color: var(--text-dim); }
+  .answer ul, .answer ol { margin: 8px 0; padding-left: 22px; }
+  .answer li { margin: 4px 0; }
+  .answer p { margin: 0 0 10px; white-space: pre-wrap; }
+  .answer p:last-child { margin-bottom: 0; }
+  .answer a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+  .answer code {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    background: var(--accent-wash);
+    padding: 2px 5px;
+    border-radius: 4px;
+  }
+  .answer pre {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    overflow-x: auto;
+    margin: 8px 0;
+  }
+  .answer pre code {
+    background: none;
+    padding: 0;
+  }
+  .answer blockquote {
+    border-left: 2px solid var(--accent-dim);
+    margin: 8px 0;
+    padding-left: 12px;
+    color: var(--text-dim);
+  }
+  .answer h1, .answer h2, .answer h3 {
+    font-family: var(--display);
+    font-size: 15px;
+    margin: 12px 0 6px;
+    color: var(--text);
+  }
 
   .cursor {
     display: inline-block;
@@ -822,9 +855,9 @@
               if (text.length === 0) continue; // still all whitespace, skip until real content arrives
               answerStarted = true;
             }
-            cursorSpan.remove();
             fullAnswerText += text;
-            refs.answerEl.append(text);
+            const html = DOMPurify.sanitize(marked.parse(fullAnswerText));
+            refs.answerEl.innerHTML = html;
             refs.answerEl.appendChild(cursorSpan);
             scrollToBottom();
           } else if (parsed.type === 'error') {
@@ -836,8 +869,7 @@
       cursorSpan.remove();
       setStreaming(false);
 
-      const finalText = refs.answerEl.textContent;
-      const urls = extractUrls(finalText);
+      const urls = extractUrls(fullAnswerText);
       renderLinkPreviews(refs.previewsEl, urls);
 
     } catch (err) {
