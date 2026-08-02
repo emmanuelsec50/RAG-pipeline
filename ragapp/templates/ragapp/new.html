@@ -4,6 +4,40 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Vixxon AI</title>
+
+<!-- Open Graph -->
+<meta property="og:title" content="Vixxon AI">
+<meta property="og:description" content="Ask Vixxon AI anything — grounded, streaming answers powered by your knowledge base.">
+<meta property="og:image" content="https://ai.vixxon.online/static/og-image.png">
+<meta property="og:url" content="https://ai.vixxon.online/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Vixxon AI">
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Vixxon AI">
+<meta name="twitter:description" content="Ask Vixxon AI anything — grounded, streaming answers powered by your knowledge base.">
+<meta name="twitter:image" content="https://ai.vixxon.online/static/og-image.png">
+<meta name="description" content="Vixxon AI — ask questions and get instant, grounded answers powered by retrieval-augmented generation.">
+
+<!-- Open Graph / Facebook, WhatsApp, LinkedIn, Discord -->
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://ai.vixxon.online/">
+<meta property="og:title" content="Vixxon AI">
+<meta property="og:description" content="Ask questions and get instant, grounded answers powered by retrieval-augmented generation.">
+<meta property="og:image" content="https://media.vixxon.online/vixon.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:site_name" content="Vixxon AI">
+
+<!-- Twitter/X -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Vixxon AI">
+<meta name="twitter:description" content="Ask questions and get instant, grounded answers powered by retrieval-augmented generation.">
+<meta name="twitter:image" content="https://media.vixxon.online/vixon.png">
+
+<!-- Favicon -->
+<link rel="icon" type="image/png" href="https://media.vixxon.online/vixon.png">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
 
@@ -375,6 +409,86 @@
     padding: 10px 14px;
   }
 
+  .link-previews {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .link-card {
+    display: flex;
+    gap: 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px;
+    background: var(--bg-elevated);
+    text-decoration: none;
+    color: inherit;
+    transition: border-color 0.15s, background 0.15s;
+  }
+
+  .link-card:hover {
+    border-color: var(--accent-dim);
+    background: var(--accent-wash);
+  }
+
+  .link-card img {
+    width: 64px;
+    height: 64px;
+    object-fit: cover;
+    border-radius: 7px;
+    flex-shrink: 0;
+    background: var(--panel);
+  }
+
+  .link-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+  }
+
+  .link-card-site {
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-faint);
+  }
+
+  .link-card-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .link-card-desc {
+    font-size: 12px;
+    color: var(--text-dim);
+    line-height: 1.4;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+
+  .link-card-skeleton {
+    height: 84px;
+    border-radius: 10px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    animation: pulse 1.4s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 0.9; }
+  }
+
   /* ---------- INPUT ---------- */
   .input-bar {
     border-top: 1px solid var(--border-soft);
@@ -613,6 +727,7 @@
         </button>
         <div class="reasoning-body"></div>
         <div class="answer"></div>
+        <div class="previews"></div>
       </div>
     `;
     thread.appendChild(msg);
@@ -632,6 +747,7 @@
 
     return {
       answerEl: msg.querySelector('.answer'),
+      previewsEl: msg.querySelector('.previews'),
       reasoningToggle,
       reasoningBody,
       rLabel: msg.querySelector('.r-label'),
@@ -653,6 +769,7 @@
     const refs = createAssistantMessage();
     let reasoningChars = 0;
     let answerStarted = false;
+    let fullAnswerText = '';
     let cursorSpan = document.createElement('span');
     cursorSpan.className = 'cursor';
     refs.answerEl.appendChild(cursorSpan);
@@ -706,6 +823,7 @@
               answerStarted = true;
             }
             cursorSpan.remove();
+            fullAnswerText += text;
             refs.answerEl.append(text);
             refs.answerEl.appendChild(cursorSpan);
             scrollToBottom();
@@ -718,6 +836,10 @@
       cursorSpan.remove();
       setStreaming(false);
 
+      const finalText = refs.answerEl.textContent;
+      const urls = extractUrls(finalText);
+      renderLinkPreviews(refs.previewsEl, urls);
+
     } catch (err) {
       cursorSpan.remove();
       setStreaming(false);
@@ -728,6 +850,53 @@
       refs.answerEl.parentElement.appendChild(errBubble);
     }
   });
+
+  function extractUrls(text) {
+    const regex = /https?:\/\/[^\s<>"')\]]+/g;
+    const matches = text.match(regex) || [];
+    return [...new Set(matches)].slice(0, 3); // dedupe, cap at 3 previews per message
+  }
+
+  async function renderLinkPreviews(container, urls) {
+    if (urls.length === 0) return;
+
+    const wrap = document.createElement('div');
+    wrap.className = 'link-previews';
+    container.appendChild(wrap);
+
+    const skeletons = urls.map(() => {
+      const s = document.createElement('div');
+      s.className = 'link-card-skeleton';
+      wrap.appendChild(s);
+      return s;
+    });
+
+    await Promise.all(urls.map(async (url, i) => {
+      try {
+        const res = await fetch(`/api/link-preview/?url=${encodeURIComponent(url)}`);
+        if (!res.ok) throw new Error('preview fetch failed');
+        const data = await res.json();
+
+        const card = document.createElement('a');
+        card.className = 'link-card';
+        card.href = url;
+        card.target = '_blank';
+        card.rel = 'noopener noreferrer';
+
+        card.innerHTML = `
+          ${data.image ? `<img src="${data.image}" alt="" onerror="this.remove()">` : ''}
+          <div class="link-card-body">
+            <div class="link-card-site">${data.site_name || ''}</div>
+            <div class="link-card-title">${data.title || url}</div>
+            ${data.description ? `<div class="link-card-desc">${data.description}</div>` : ''}
+          </div>
+        `;
+        skeletons[i].replaceWith(card);
+      } catch {
+        skeletons[i].remove(); // silently drop failed previews rather than showing broken cards
+      }
+    }));
+  }
 
   promptInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
