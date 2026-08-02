@@ -26,7 +26,8 @@ SECRET_KEY = config('SECRET_KEY')
 DEBUG = False
 
 # ALLOWED_HOSTS = ['*']
-ALLOWED_HOSTS = ['rag-pipeline-cdf8.onrender.com']
+ALLOWED_HOSTS = ['rag-pipeline-cdf8.onrender.com',
+                 'ai.vixxon.online']
 
 CSRF_TRUSTED_ORIGINS = [
     "https://rag-pipeline-cdf8.onrender.com",
