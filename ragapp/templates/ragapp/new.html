@@ -232,6 +232,33 @@
     margin: 0;
   }
 
+  .suggestions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 20px;
+  }
+
+  .suggestion-chip {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 500;
+    text-align: left;
+    padding: 10px 14px;
+    border-radius: 9px;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
+  }
+
+  .suggestion-chip:hover {
+    border-color: var(--accent-dim);
+    color: var(--text);
+    background: var(--accent-wash);
+  }
+
   .msg {
     display: flex;
     flex-direction: column;
@@ -503,12 +530,16 @@
       <div class="mark">V</div>
       <h2>Ask Vixxon AI anything</h2>
       <p>Grounded in your knowledge base — ask a question to get started.</p>
+      <div class="suggestions" id="suggestions">
+        <button type="button" class="suggestion-chip">How do I download my admission letter?</button>
+        <button type="button" class="suggestion-chip">What documents do I need for enrollment?</button>
+        <button type="button" class="suggestion-chip">How do I reset my student portal password?</button>
+      </div>
     </div>
   </div>
 
   <div class="input-bar">
     <form id="queryForm">
-      {% csrf_token %}
       <textarea id="prompt" placeholder="Message Vixxon AI..." required rows="1"></textarea>
       <button type="submit" id="submitBtn">Send</button>
     </form>
@@ -529,7 +560,7 @@
   const knobIcon = document.getElementById('knobIcon');
 
   // ---------- Theme ----------
-  let theme = 'light';
+  let theme = 'dark';
   themeToggle.addEventListener('click', () => {
     theme = theme === 'dark' ? 'light' : 'dark';
     document.body.setAttribute('data-theme', theme);
@@ -629,7 +660,6 @@
     setStreaming(true);
 
     try {
-      console.log("ok")
       const response = await fetch('/api/query/', {
         method: 'POST',
         headers: {
@@ -704,6 +734,14 @@
       e.preventDefault();
       form.requestSubmit();
     }
+  });
+
+  document.querySelectorAll('.suggestion-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      promptInput.value = chip.textContent;
+      autoGrow();
+      form.requestSubmit();
+    });
   });
 </script>
 

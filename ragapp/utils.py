@@ -109,7 +109,7 @@ def print_top_results_and_scores(query: str,
                                                   n_resources_to_return=n_resources_to_return)
 
     
-    pages_and_chunks_save_path_pickle = "./ragapp/pages_and_chunks3.pkl"
+    pages_and_chunks_save_path_pickle = "./ragapp/pages_and_chunks4.pkl"
     with open(pages_and_chunks_save_path_pickle, "rb") as f:
         pages_and_chunks = pickle.load(f)
     
@@ -165,13 +165,13 @@ def ask(query: str,
     # RETRIEVAL
     # Get just the scores and indices of top related results
     # t5 = time.time()
-    embeddings = torch.load('./ragapp/embeddings3.pt')
+    embeddings = torch.load('./ragapp/embeddings4.pt')
     # print(f"[TIMING] torch.load: {time.time() - t5:.2f}s")
     scores, indices = retrieve_relevant_resources(query=query,
                                                   embeddings=embeddings)
 
     # Create a list of context items
-    pages_and_chunks_save_path_pickle = "./ragapp/pages_and_chunks3.pkl"
+    pages_and_chunks_save_path_pickle = "./ragapp/pages_and_chunks4.pkl"
     # t6 = time.time()
     with open(pages_and_chunks_save_path_pickle, "rb") as f:
         pages_and_chunks = pickle.load(f)
