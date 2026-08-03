@@ -25,7 +25,7 @@ A Retrieval-Augmented Generation (RAG) chatbot built with Django, featuring real
 |---|---|
 | Backend framework | Django 6, Gunicorn |
 | Retrieval | PyTorch (CPU-only) — dense vector similarity over pre-computed embeddings |
-| Embeddings & generation | NVIDIA-hosted API (`nvidia/nemotron-3-embed-1b` for embeddings, `z-ai/glm-5.2` for generation) |
+| Embeddings & generation | NVIDIA-hosted API (`nvidia/nemotron-3-embed-1b` for embeddings, `Deepseek` for generation) |
 | Streaming | Server-Sent Events (SSE) over Django `StreamingHttpResponse` |
 | Frontend | Vanilla HTML/CSS/JS — no framework, no build step |
 | Markdown rendering | marked.js + DOMPurify (client-side, sanitized) |
@@ -56,8 +56,8 @@ A Retrieval-Augmented Generation (RAG) chatbot built with Django, featuring real
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/emmanuelsec50/vixxon-ai.git
-   cd vixxon-ai
+   git clone https://github.com/emmanuelsec50/RAG-pipeline.git
+   cd RAG-pipeline
    ```
 
 2. **Create a virtual environment and install dependencies**
@@ -74,14 +74,14 @@ A Retrieval-Augmented Generation (RAG) chatbot built with Django, featuring real
 
    Create a `.env` file in the project root:
    ```
-   GLM_API_KEY=your_nvidia_api_key
+   LLM_API_KEY=your_nvidia_api_key
    EMBED_API_KEY=your_nvidia_api_key
    DJANGO_SECRET_KEY=your_secret_key
    ```
 
 4. **Add your knowledge base files**
 
-   Place your pre-computed `embeddings1.pt` and `pages_and_chunks1.pkl` files in the `ragapp/` directory.
+   Place your pre-computed `embeddings.pt` and `pages_and_chunks.pkl` files in the `ragapp/` directory.
 
 5. **Run migrations and start the server**
    ```bash
