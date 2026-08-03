@@ -1,12 +1,12 @@
 # Vixxon AI
 
-A Retrieval-Augmented Generation (RAG) chatbot built with Django, featuring real-time streaming responses, semantic retrieval over a custom knowledge base, and a fully custom branded chat interface.
+A Retrieval-Augmented Generation (RAG) chatbot built with Django, featuring real-time streaming responses, semantic retrieval over a custom knowledge base, and a fully custom branded chat interface. I built the project to help university students go through processes such as HELB applications, admission processes and university student portal access.
 
 **Live demo:** [ai.vixxon.online](https://ai.vixxon.online)
 
 ---
 
-## ✨ Features
+## Features
 
 - **Retrieval-Augmented Generation** — answers are grounded in a custom knowledge base via dense embedding retrieval, not just raw model knowledge.
 - **Real-time streaming** — responses stream token-by-token over Server-Sent Events (SSE), including a separate live stream of the model's reasoning trace.
@@ -19,7 +19,7 @@ A Retrieval-Augmented Generation (RAG) chatbot built with Django, featuring real
 
 ---
 
-## 🛠 Tech Stack
+## Tech Stack
 
 | Layer | Technology |
 |---|---|
@@ -35,7 +35,7 @@ A Retrieval-Augmented Generation (RAG) chatbot built with Django, featuring real
 
 ---
 
-## 🧠 How Retrieval Works
+## How Retrieval Works
 
 1. A knowledge base is pre-processed offline into sentence-level chunks and embedded via the NVIDIA embeddings API.
 2. Embeddings are stored as a single `.pt` tensor file, loaded into memory once at application startup (not per-request).
@@ -45,7 +45,7 @@ A Retrieval-Augmented Generation (RAG) chatbot built with Django, featuring real
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
@@ -93,7 +93,7 @@ A Retrieval-Augmented Generation (RAG) chatbot built with Django, featuring real
 
 ---
 
-## ☁️ Deployment
+## Deployment
 
 This project is deployed on [Render](https://render.com) with the following considerations:
 
@@ -107,7 +107,7 @@ This project is deployed on [Render](https://render.com) with the following cons
 
 ---
 
-## 📌 Roadmap / Known Trade-offs
+## Roadmap / Known Trade-offs
 
 - No persistent chat history yet — each session starts fresh.
 - Semantic caching (returning cached answers for near-duplicate queries) is under consideration but not yet implemented.
@@ -115,6 +115,6 @@ This project is deployed on [Render](https://render.com) with the following cons
 
 ---
 
-## 📄 License
+## License
 
 Distributed under the MIT License.
