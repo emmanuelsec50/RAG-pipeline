@@ -27,12 +27,13 @@ DEBUG = False
 
 # ALLOWED_HOSTS = ['*']
 ALLOWED_HOSTS = ['rag-pipeline-cdf8.onrender.com',
-                 'ai.vixxon.online'
+                 'ai.vixxon.online',
+                 'stk.vixxon.online',
                 ]
 
 CSRF_TRUSTED_ORIGINS = [
     "https://rag-pipeline-cdf8.onrender.com",
-    
+    "https://ai.vixxon.online",
 ]
 # Application definition
 
