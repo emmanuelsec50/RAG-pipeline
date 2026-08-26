@@ -50,9 +50,12 @@ def build_report(results: list[dict]) -> dict:
         or (r["retrieval_semantic_score"] is not None and r["retrieval_semantic_score"] < 0.5)
     ]
 
+    judge_failures = [r for r in results if r.get("error") and r["correctness"] is None]
+
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "total_questions": len(results),
+        "judge_failures_count": len(judge_failures),
         "overall": {
             "avg_correctness": _safe_mean([r["correctness"] for r in results]),
             "avg_faithfulness": _safe_mean([r["faithfulness"] for r in results]),
@@ -103,6 +106,25 @@ def write_markdown_report(report: dict, path: str = "eval_report.md"):
             f"{stats['avg_retrieval_semantic_score']} |"
         )
 
+    if report["judge_failures_count"] > 0:
+        lines += [
+            "",
+            f"## ⚠️ Judge Failures ({report['judge_failures_count']})",
+            "",
+            "These questions have NO correctness/faithfulness score because "
+            "the judge itself failed (API error or unparseable response) — "
+            "NOT because the answer was graded and found lacking. Treat "
+            "these as unscored, not as passing or failing.",
+            "",
+        ]
+        for r in report["all_results"]:
+            if r.get("error") and r["correctness"] is None:
+                lines += [
+                    f"### {r['id']}: {r['question']}",
+                    f"- **Error:** {r['error']}",
+                    "",
+                ]
+
     lines += ["", f"## Flagged for Manual Review ({len(report['flagged_for_review'])})", ""]
 
     if not report["flagged_for_review"]:
@@ -117,6 +139,7 @@ def write_markdown_report(report: dict, path: str = "eval_report.md"):
                 f"- **Retrieval (keyword):** {r['retrieval_keyword_score']}",
                 f"- **Retrieval (semantic):** {r['retrieval_semantic_score']}",
                 f"- **Judge reasoning:** {r['judge_reasoning']}",
+                f"- **Error:** {r.get('error')}",
                 f"- **Generated answer:** {r['generated_answer']}",
                 f"- **Reference answer:** {r['reference_answer']}",
                 f"",

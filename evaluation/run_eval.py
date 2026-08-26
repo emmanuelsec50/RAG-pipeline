@@ -13,7 +13,7 @@ import logging
 
 from .dataset import EVAL_CASES
 from .retrieval_metrics import retrieval_overlap_score
-from .semantic_similarity import semantic_overlap_score
+from .semantic_similarity import max_chunk_similarity
 from .judge import grade_answer
 from .report import build_report, write_json_report, write_markdown_report
 from . import pipeline_adapter
@@ -38,6 +38,7 @@ def run_single_case(case: dict, embeddings, pages_and_chunks) -> dict:
         retrieval = pipeline_adapter.retrieve(question, embeddings, pages_and_chunks)
         context_text = retrieval["context_text"]
         context_items = retrieval["context_items"]
+        chunk_embeddings = retrieval["chunk_embeddings"]
     except Exception as exc:
         logger.error("Retrieval failed for %r: %s", question, exc)
         return {**case, "error": f"retrieval_failed: {exc}",
@@ -55,9 +56,14 @@ def run_single_case(case: dict, embeddings, pages_and_chunks) -> dict:
                 "judge_reasoning": None}
 
     keyword_result = retrieval_overlap_score(context_text, case["reference_answer"])
-    semantic_result = semantic_overlap_score(
-        context_text, case["reference_answer"], embed_fn=pipeline_adapter.embed_text
-    )
+
+    try:
+        reference_embedding = pipeline_adapter.embed_text(case["reference_answer"])
+        chunk_texts = [item["sentence_chunk"] for item in context_items]
+        semantic_result = max_chunk_similarity(reference_embedding, chunk_embeddings, chunk_texts)
+    except Exception as exc:
+        logger.warning("Semantic scoring failed for %r: %s", question, exc)
+        semantic_result = {"score": None, "best_chunk_text": None, "error": str(exc)}
 
     judge_result = grade_answer(
         question=question,
@@ -73,10 +79,11 @@ def run_single_case(case: dict, embeddings, pages_and_chunks) -> dict:
         "retrieval_keyword_score": keyword_result["score"],
         "retrieval_keyword_missing_terms": keyword_result["missing_terms"],
         "retrieval_semantic_score": semantic_result["score"],
+        "retrieval_best_matching_chunk": semantic_result.get("best_chunk_text"),
         "correctness": judge_result["correctness"],
         "faithfulness": judge_result["faithfulness"],
         "judge_reasoning": judge_result["reasoning"],
-        "error": judge_result.get("error"),
+        "error": judge_result.get("error") or semantic_result.get("error"),
     }
 
 

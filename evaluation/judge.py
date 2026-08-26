@@ -1,23 +1,8 @@
 """
 LLM-as-judge scoring for generated answers.
-
-Deliberately uses a NON-streaming call, separate from the production
-glm() generator in ragapp/utils.py — streaming is a UX concern for the
-live chat interface, and has no benefit for offline batch evaluation.
-Mixing the two would couple this harness unnecessarily to the SSE
-plumbing built for the chat UI.
-
-The judge is asked to score two DIFFERENT things, not one blended score,
-because they catch different failure modes:
-
-- correctness: does the generated answer match the reference answer's
-  actual content? (catches wrong information)
-- faithfulness: is the generated answer actually supported by the
-  retrieved context, or did it add unsupported claims? (catches
-  hallucination — this can be LOW even when correctness is high, if the
-  model happened to guess right without the context actually saying so)
 """
 import json
+import re
 import logging
 
 from openai import OpenAI
@@ -48,22 +33,41 @@ question (the assistant should say it doesn't know rather than guess), \
 score correctness as 5 ONLY if the generated answer appropriately \
 declines/hedges, and as 1 if it confidently fabricates an answer.
 
-Respond with ONLY a JSON object, no other text, in this exact shape:
+Respond with ONLY a JSON object, no other text before or after it, in \
+this exact shape:
 {"correctness": <int 1-5>, "faithfulness": <int 1-5>, "reasoning": "<one or two sentences>"}
 """
+
+
+def _extract_json_object(raw: str) -> dict:
+    """
+    Robustly pulls a JSON object out of a model response that may have
+    preamble/postamble text around it despite instructions not to
+    include any (models don't always follow that instruction reliably).
+
+    Strategy: find the first '{' and the LAST matching '}' in the text
+    and parse only that substring. This is more robust than the
+    previous approach (which only handled markdown-fence-wrapped JSON)
+    because it works regardless of what surrounds the JSON object.
+    """
+    start = raw.find("{")
+    end = raw.rfind("}")
+    if start == -1 or end == -1 or end < start:
+        raise ValueError(f"No JSON object found in judge response: {raw[:200]!r}")
+    return json.loads(raw[start:end + 1])
 
 
 def grade_answer(question: str, generated_answer: str, reference_answer: str,
                   retrieved_context: str) -> dict:
     """
-    Returns a dict: {correctness, faithfulness, reasoning}.
-    On any failure to get a valid judgment (API error, malformed JSON),
-    returns a dict with score=None and an error message rather than
-    raising — a single bad grading call shouldn't crash an entire eval
-    run over a full dataset.
+    Returns a dict: {correctness, faithfulness, reasoning, error}.
+    On any failure, correctness/faithfulness/reasoning are None and
+    `error` contains the actual failure reason — this is what lets a
+    human diagnose WHY a question wasn't scored, instead of just seeing
+    a silent None in the report.
     """
     client = OpenAI(
-        base_url="https://api.deepseek.com",
+        base_url="https://integrate.api.nvidia.com/v1",
         api_key=config("DEEPSEEK_API_KEY"),
     )
 
@@ -76,6 +80,7 @@ Retrieved context (what the RAG pipeline had available): {retrieved_context}
 Generated answer (to be graded): {generated_answer}
 """
 
+    raw = None
     try:
         completion = client.chat.completions.create(
             model=JUDGE_MODEL,
@@ -91,14 +96,8 @@ Generated answer (to be graded): {generated_answer}
             response_format={'type': 'json_object'}
         )
         raw = completion.choices[0].message.content.strip()
+        parsed = _extract_json_object(raw)
 
-        # Models occasionally wrap JSON in markdown fences despite
-        # instructions not to — strip defensively rather than failing
-        # the whole grading run over formatting.
-        if raw.startswith("```"):
-            raw = raw.strip("`").removeprefix("json").strip()
-
-        parsed = json.loads(raw)
         return {
             "correctness": int(parsed["correctness"]),
             "faithfulness": int(parsed["faithfulness"]),
@@ -112,5 +111,8 @@ Generated answer (to be graded): {generated_answer}
             "correctness": None,
             "faithfulness": None,
             "reasoning": None,
-            "error": str(exc),
+            # Include the raw response (truncated) in the error so a
+            # human reviewing the report can see exactly what the model
+            # returned that failed to parse, not just "it failed."
+            "error": f"{exc} | raw_response={raw[:300] if raw else None!r}",
         }

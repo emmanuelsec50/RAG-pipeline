@@ -36,18 +36,26 @@ def load_knowledge_base(embeddings_path: str = None, chunks_path: str = None):
 
 def retrieve(query: str, embeddings, pages_and_chunks, n_resources: int = 8) -> dict:
     """
-    Calls your real retrieve_relevant_resources(). Returns both the
-    joined context TEXT (what the scoring functions need) and the raw
-    context ITEMS (so generate_answer() can build the same prompt shape
-    prompt_formatter() expects, and so you can inspect exactly which
-    chunks were pulled when reviewing a flagged low-scoring question).
+    Calls your real retrieve_relevant_resources(). Returns:
+      - context_text: joined chunk text (for keyword scoring, prompt building)
+      - context_items: raw chunk dicts (for prompt_formatter and manual review)
+      - chunk_embeddings: the ALREADY-COMPUTED embedding vectors for the
+        retrieved chunks, sliced straight out of the loaded embeddings
+        tensor. Used by max_chunk_similarity() — no extra embedding API
+        calls needed, since these vectors already exist from your
+        knowledge base build step.
     """
     scores, indices = retrieve_relevant_resources(
         query=query, embeddings=embeddings, n_resources_to_return=n_resources
     )
     context_items = [pages_and_chunks[i] for i in indices]
     context_text = "\n".join(item["chunk"] for item in context_items)
-    return {"context_text": context_text, "context_items": context_items}
+    chunk_embeddings = embeddings[indices]
+    return {
+        "context_text": context_text,
+        "context_items": context_items,
+        "chunk_embeddings": chunk_embeddings,
+    }
 
 
 def generate_answer(query: str, context_items: list) -> str:
