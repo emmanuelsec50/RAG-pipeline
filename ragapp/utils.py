@@ -9,6 +9,10 @@ import textwrap
 import pickle
 from decouple import config
 
+PAGES_AND_CHUNKS_SAVE_PATH_PICKLE = "./ragapp/pages_and_chunks5.pkl"
+EMBEDDINGS_PATH = './ragapp/embeddings5.pt'
+
+
 def print_wrapped(text, wrap_length=80):
     wrapped_text = textwrap.fill(text, wrap_length)
     print(wrapped_text)
@@ -16,9 +20,9 @@ def print_wrapped(text, wrap_length=80):
 
 def prompt_formatter(query: str,
                      context_items: list[dict]) -> str:
-    context = "- " + "\n- ".join([item["sentence_chunk"] for item in context_items])
+    context = "- " + "\n- ".join([item["chunk"] for item in context_items])
 
-    base_prompt = f"""Based on the following context items, please answer the query.
+    base_prompt = f"""You are an Embu University Chat Bot. Based on the following context items, please answer the query.
 Give yourself room to think by extracting relevant passages from the context before answering the query.
 Don't return the thinking, only return the answer.
 Make sure your answers are as explanatory as possible.
@@ -26,6 +30,7 @@ Use the following example as reference for the ideal answer style.
 \nExample 1:
 Query: What is the importance of hydration for physical performance?
 Answer: Hydration is crucial for physical performance because water plays key roles in maintaining blood volume, regulating body temperature, and ensuring the transport of nutrients and oxygen to cells. Adequate hydration is essential for optimal muscle function, endurance, and recovery. Dehydration can lead to decreased performance, fatigue, and increased risk of heat-related illnesses, such as heat stroke. Drinking sufficient water before, during, and after exercise helps ensure peak physical performance and recovery.
+\n If the retrieved context doesn't contain a clear answer, say so directly rather than reasoning through unrelated information.
 \nNow use the following context items to answer the user query:
 {context}
 User query: {query}
@@ -78,8 +83,7 @@ def retrieve_relevant_resources(query: str,
     Embeds a query with model and returns top k scores and indices from embeddings.
     """
 
-    # Embed the query
-    # query_embedding = model.encode(query, convert_to_tensor=True)
+    
     
     query_embedding = embed(query)
     
@@ -89,8 +93,6 @@ def retrieve_relevant_resources(query: str,
     dot_scores = dot_score(query_embedding, embeddings)[0]
     
 
-    # if print_time:
-    #     print(f"[INFO] Time taken to get scores on ({len(embeddings)} embeddings: {end_time-start_time:.5f} seconds.")
     
     scores, indices = torch.topk(input=dot_scores,
                                  k=n_resources_to_return)
@@ -109,8 +111,8 @@ def print_top_results_and_scores(query: str,
                                                   n_resources_to_return=n_resources_to_return)
 
     
-    pages_and_chunks_save_path_pickle = "./ragapp/pages_and_chunks4.pkl"
-    with open(pages_and_chunks_save_path_pickle, "rb") as f:
+    
+    with open(PAGES_AND_CHUNKS_SAVE_PATH_PICKLE, "rb") as f:
         pages_and_chunks = pickle.load(f)
     
     # Loop through zipped together scores and indices from torch.topk
@@ -135,8 +137,7 @@ def glm(prompt: str):
         reasoning_effort="high",
         extra_body={"thinking": {"type": "disabled"}}
     )
-    # print(f"[TIMING] glm: {time.time() - t4:.2f}s")
-    # t13 = time.time()
+    
     for chunk in response:
         if not getattr(chunk, "choices", None):
             continue
@@ -152,7 +153,7 @@ def glm(prompt: str):
             yield f"data: {json.dumps({'type': 'content', 'text': content})}\n\n"
     
     yield "data: [DONE]\n\n"
-    # print(f"[TIMING] glm: {time.time() - t13:.2f}s")
+   
 def ask(query: str,
         temperature: float=0.7,
         max_new_tokens:int=256,
@@ -164,32 +165,33 @@ def ask(query: str,
 
     # RETRIEVAL
     # Get just the scores and indices of top related results
-    # t5 = time.time()
-    embeddings = torch.load('./ragapp/embeddings4.pt')
-    # print(f"[TIMING] torch.load: {time.time() - t5:.2f}s")
+    
+    embeddings = torch.load(EMBEDDINGS_PATH)
+    
     scores, indices = retrieve_relevant_resources(query=query,
                                                   embeddings=embeddings)
 
     # Create a list of context items
-    pages_and_chunks_save_path_pickle = "./ragapp/pages_and_chunks4.pkl"
-    # t6 = time.time()
-    with open(pages_and_chunks_save_path_pickle, "rb") as f:
+    
+    
+    with open(PAGES_AND_CHUNKS_SAVE_PATH_PICKLE, "rb") as f:
         pages_and_chunks = pickle.load(f)
+    
     context_items = [pages_and_chunks[i] for i in indices] 
-    # print(f"[TIMING] pickle and iteration: {time.time() - t6:.2f}s")
+    
 
     # Add score to context item
-    # t7 = time.time()
+    
     for i, item in enumerate(context_items): 
         item["score"] = scores[i].cpu()
-    # print(f"[TIMING] Add score to context item: {time.time() - t7:.2f}s")
+    
 
     # AUGMENTATION
     # Create the prompt and format it with context items
-    # t8 = time.time()
+    
     prompt = prompt_formatter(query=query,
                               context_items=context_items)
-    # print(f"[TIMING] Create the prompt and format it with context items: {time.time() - t8:.2f}s.  {os.cpu_count()}")
+    
     return glm(prompt)
 
 

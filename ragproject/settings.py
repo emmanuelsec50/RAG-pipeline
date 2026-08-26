@@ -23,18 +23,18 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = config('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
-# ALLOWED_HOSTS = ['*']
-ALLOWED_HOSTS = ['rag-pipeline-cdf8.onrender.com',
-                 'ai.vixxon.online',
-                 'stk.vixxon.online',
-                ]
+ALLOWED_HOSTS = []
+# ALLOWED_HOSTS = ['rag-pipeline-cdf8.onrender.com',
+#                  'ai.vixxon.online',
+#                  'stk.vixxon.online',
+#                 ]
 
-CSRF_TRUSTED_ORIGINS = [
-    "https://rag-pipeline-cdf8.onrender.com",
-    "https://ai.vixxon.online",
-]
+# CSRF_TRUSTED_ORIGINS = [
+#     "https://rag-pipeline-cdf8.onrender.com",
+#     "https://ai.vixxon.online",
+# ]
 # Application definition
 
 INSTALLED_APPS = [
@@ -44,7 +44,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'ragapp.apps.RagappConfig'
+    'ragapp.apps.RagappConfig',
+    'evaluation'
 ]
 
 MIDDLEWARE = [
