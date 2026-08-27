@@ -23,18 +23,18 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = config('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
-# ALLOWED_HOSTS = []
-ALLOWED_HOSTS = ['rag-pipeline-cdf8.onrender.com',
-                 'ai.vixxon.online',
-                 'stk.vixxon.online',
-                ]
+ALLOWED_HOSTS = []
+# ALLOWED_HOSTS = ['rag-pipeline-cdf8.onrender.com',
+#                  'ai.vixxon.online',
+#                  'stk.vixxon.online',
+#                 ]
 
-CSRF_TRUSTED_ORIGINS = [
-    "https://rag-pipeline-cdf8.onrender.com",
-    "https://ai.vixxon.online",
-]
+# CSRF_TRUSTED_ORIGINS = [
+#     "https://rag-pipeline-cdf8.onrender.com",
+#     "https://ai.vixxon.online",
+# ]
 # Application definition
 
 INSTALLED_APPS = [
@@ -45,7 +45,9 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'ragapp.apps.RagappConfig',
-    'evaluation'
+    'evaluation',
+
+    'django_redis'
 ]
 
 MIDDLEWARE = [
@@ -124,3 +126,23 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+
+
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": "redis://127.0.0.1:6379/1",  # database 1 for cache
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            #"PARSER_CLASS": "redis.connection._HiredisParser",
+            "CONNECTION_POOL_CLASS": "redis.BlockingConnectionPool",
+            "CONNECTION_POOL_CLASS_KWARGS": {
+                "max_connections": 50,
+                "timeout": 20,
+            },
+            "MAX_CONNECTIONS": 1000,
+            "PICKLE_VERSION": -1,
+        },
+        "KEY_PREFIX": "myapp_cache",  #avoids collisions
+    }
+}

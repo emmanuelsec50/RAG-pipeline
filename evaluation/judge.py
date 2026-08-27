@@ -67,7 +67,7 @@ def grade_answer(question: str, generated_answer: str, reference_answer: str,
     a silent None in the report.
     """
     client = OpenAI(
-        base_url="https://integrate.api.nvidia.com/v1",
+        base_url="https://api.deepseek.com",
         api_key=config("DEEPSEEK_API_KEY"),
     )
 
