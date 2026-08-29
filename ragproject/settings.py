@@ -23,18 +23,18 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = config('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
-ALLOWED_HOSTS = []
-# ALLOWED_HOSTS = ['rag-pipeline-cdf8.onrender.com',
-#                  'ai.vixxon.online',
-#                  'stk.vixxon.online',
-#                 ]
+# ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['rag-pipeline-cdf8.onrender.com',
+                 'ai.vixxon.online',
+                 'stk.vixxon.online',
+                ]
 
-# CSRF_TRUSTED_ORIGINS = [
-#     "https://rag-pipeline-cdf8.onrender.com",
-#     "https://ai.vixxon.online",
-# ]
+CSRF_TRUSTED_ORIGINS = [
+    "https://rag-pipeline-cdf8.onrender.com",
+    "https://ai.vixxon.online",
+]
 # Application definition
 
 INSTALLED_APPS = [
@@ -131,18 +131,15 @@ STATIC_URL = 'static/'
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://127.0.0.1:6379/1",  # database 1 for cache
+        "LOCATION": config("REDIS_URL", default="redis://127.0.0.1:6379/1"),
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
-            #"PARSER_CLASS": "redis.connection._HiredisParser",
             "CONNECTION_POOL_CLASS": "redis.BlockingConnectionPool",
-            "CONNECTION_POOL_CLASS_KWARGS": {
+            "CONNECTION_POOL_KWARGS": {   # <-- fixed key name
                 "max_connections": 50,
                 "timeout": 20,
             },
-            "MAX_CONNECTIONS": 1000,
-            "PICKLE_VERSION": -1,
         },
-        "KEY_PREFIX": "myapp_cache",  #avoids collisions
+        "KEY_PREFIX": "vixxonai",   # was "myapp_cache" — looked like an unedited placeholder
     }
 }

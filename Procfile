@@ -1,1 +1,1 @@
-web: ragproject.wsgi
+web: uvicorn ragproject.asgi:application --host 0.0.0.0 --port $PORT

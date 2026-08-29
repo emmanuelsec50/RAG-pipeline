@@ -4,11 +4,15 @@ import time
 import torch
 import os
 import requests
-from openai import OpenAI
+from .clients import openrouter_client, deepseek_client
 import textwrap
 import pickle
 from decouple import config
 from django.core.cache import cache
+import asyncio
+from .knowledge_base import get as get_knowledge_base
+from asgiref.sync import sync_to_async
+
 
 PAGES_AND_CHUNKS_SAVE_PATH_PICKLE = "./ragapp/pages_and_chunks_mongo.pkl"
 EMBEDDINGS_PATH = './ragapp/embeddings_mongo.pt'
@@ -39,7 +43,7 @@ Answer:"""
     
     return base_prompt
 
-def embed(context):
+async def embed(context):
   # --- Configuration ---
     # embed_api_key = config("EMBED_API_KEY")
     # url = "https://integrate.api.nvidia.com/v1/embeddings"
@@ -68,15 +72,7 @@ def embed(context):
     # embedding = data["data"][0]["embedding"]
     # return embedding
 
-
-    from openai import OpenAI
-
-    client = OpenAI(
-    base_url="https://openrouter.ai/api/v1",
-    api_key=config("VOYAGE_API"),
-    )
-
-    embedding = client.embeddings.create(
+    embedding = await openrouter_client.embeddings.create(
     extra_headers={
         "HTTP-Referer": "ai.vixxon.online", # Optional. Site URL for rankings on openrouter.ai.
         "X-OpenRouter-Title": "vixxon", # Optional. Site title for rankings on openrouter.ai.
@@ -94,7 +90,7 @@ def embed(context):
 
 
 
-def retrieve_relevant_resources(query: str,
+async def retrieve_relevant_resources(query: str,
                                 embeddings: torch.tensor,
                                 n_resources_to_return: int=8,
                                 print_time: bool=True):
@@ -104,16 +100,16 @@ def retrieve_relevant_resources(query: str,
 
     
     
-    query_embedding = embed(query)
+    query_embedding = await embed(query)
     # print('embedded')
 
     # Get dot product scores on embeddings
     
-    dot_scores = dot_score(query_embedding, embeddings)[0]
-    
+    # dot_scores = dot_score(query_embedding, embeddings)[0]
+    dot_scores = await asyncio.to_thread(dot_score, query_embedding, embeddings)
 
     
-    scores, indices = torch.topk(input=dot_scores,
+    scores, indices = torch.topk(input=dot_scores[0],
                                  k=n_resources_to_return)
     
     return scores, indices
@@ -131,8 +127,8 @@ def print_top_results_and_scores(query: str,
 
     
     
-    with open(PAGES_AND_CHUNKS_SAVE_PATH_PICKLE, "rb") as f:
-        pages_and_chunks = pickle.load(f)
+    
+    embeddings, pages_and_chunks = get_knowledge_base()
     
     # Loop through zipped together scores and indices from torch.topk
     for score, idx in zip(scores, indices):
@@ -141,12 +137,10 @@ def print_top_results_and_scores(query: str,
         
         print("\n")
 
-def glm(prompt: str):
-    client = OpenAI(
-    api_key=config('DEEPSEEK_API_KEY'),
-    base_url="https://api.deepseek.com")
+async def glm(prompt: str):
+    
 
-    response = client.chat.completions.create(
+    response = await deepseek_client.chat.completions.create(
         model="deepseek-v4-flash",
         messages=[
             {"role": "system", "content": "You are a helpful assistant"},
@@ -157,7 +151,7 @@ def glm(prompt: str):
         extra_body={"thinking": {"type": "disabled"}}
     )
     
-    for chunk in response:
+    async for chunk in response:
         if not getattr(chunk, "choices", None):
             continue
         if len(chunk.choices) == 0 or getattr(chunk.choices[0], "delta", None) is None:
@@ -173,7 +167,7 @@ def glm(prompt: str):
     
     yield "data: [DONE]\n\n"
    
-def ask(query: str,
+async def ask(query: str,
         conversation,
         temperature: float=0.7,
         max_new_tokens:int=256,
@@ -186,23 +180,22 @@ def ask(query: str,
 
 
     convo = get_last_five_convo(conversation)
-    prompt = prompt_rewrite(query, convo)
-    print(prompt)
+    prompt = await prompt_rewrite(query, convo)
+    
 
 
     # RETRIEVAL
     # Get just the scores and indices of top related results
     # ----------------------------------------------------------------------------------
-    embeddings = torch.load(EMBEDDINGS_PATH)
+    embeddings, pages_and_chunks = get_knowledge_base()
     
-    scores, indices = retrieve_relevant_resources(query=prompt,
+    scores, indices = await retrieve_relevant_resources(query=prompt,
                                                   embeddings=embeddings)
 
     # Create a list of context items
     
     
-    with open(PAGES_AND_CHUNKS_SAVE_PATH_PICKLE, "rb") as f:
-        pages_and_chunks = pickle.load(f)
+    
     context_items = [pages_and_chunks[i] for i in indices] 
     
 
@@ -221,19 +214,23 @@ def ask(query: str,
     
     return glm(prompt)
 
-def stream_and_save(chat_id, prompt):
+async def stream_and_save(chat_id, prompt):
     accumulated = []
-    for chunk in ask(prompt, get_messages(str(chat_id))):
+    # messages = sync_to_async(get_messages)(str(chat_id))
+    async for chunk in await ask(prompt, await get_messages(str(chat_id))):
         if chunk.startswith("data: "):
             try:
                 payload = json.loads(chunk[6:].strip())
                 if payload.get("type") == "content":
                     accumulated.append(payload["text"])
+
             except (json.JSONDecodeError, ValueError):
                 pass
         yield chunk
-    save_message(str(chat_id), 'user', prompt)
-    save_message(str(chat_id), 'assistant', "".join(accumulated))
+    # save_message(str(chat_id), 'user', prompt)
+    # save_message(str(chat_id), 'assistant', "".join(accumulated))
+    await sync_to_async(save_message)(str(chat_id),  'user', prompt)
+    await sync_to_async(save_message)(str(chat_id), 'assistant', "".join(accumulated))
 
 
 
@@ -265,15 +262,15 @@ def save_message(chat_id: str, role: str, content: str):
             "role": role,
             "content": content
              })
-        cache.set(chat_id, conversation)
+        cache.set(chat_id, conversation, 60*15)
     else:
         cache.set(chat_id, [{
             "role": role,
             "content": content
-             }])
+             }], 60*15)
 
-def get_messages(chat_id):
-    conversation = cache.get(chat_id)
+async def get_messages(chat_id):
+    conversation = await cache.aget(chat_id)
     if conversation:
         return conversation
     else:
@@ -290,14 +287,11 @@ def get_last_five_convo(conversation) -> str:
         convo += f'{item['role']} - {item['content']}\n'
     return convo
 
-def prompt_rewrite(prompt, conversation):
+async def prompt_rewrite(prompt, conversation):
     if conversation == 'No conversation yet':
         return prompt
 
-    client = OpenAI(
-        base_url="https://openrouter.ai/api/v1",
-        api_key=config('VOYAGE_API'),
-    )
+    
     query_rewrite_prompt = """You are a query rewriter for a retrieval-augmented generation (RAG) system.
 
 Your task is to transform the user's query into an optimized, standalone search query for a semantic document search engine.
@@ -315,7 +309,7 @@ Output ONLY the rewritten query as plain text. No explanations, no quotes, no pr
 
 
     
-    response = client.chat.completions.create(
+    response = await openrouter_client.chat.completions.create(
     model="deepseek/deepseek-v4-flash",
     messages=[
             {"role": "system", "content": "You are a query rewriter for a RAG system"},

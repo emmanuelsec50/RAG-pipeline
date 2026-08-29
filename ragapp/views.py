@@ -1,21 +1,27 @@
 from django.shortcuts import render
 from .utils import *
 # Create your views here.
-from django.http import StreamingHttpResponse
+from django.http import HttpResponseNotAllowed, StreamingHttpResponse
 from django_ratelimit.decorators import ratelimit
 import json
 from django.http import StreamingHttpResponse, HttpResponseBadRequest
-from django.views.decorators.csrf import csrf_protect
+from django.views.decorators.csrf import csrf_protect, csrf_exempt
 from django.views.decorators.http import require_POST
 from django.core.cache import cache
+from asgiref.sync import sync_to_async
+from .ratelimit import async_ratelimit, ip_key, chat_id_key
 
 
-@ratelimit(key='ip', rate='3/m', block=True)
+@csrf_exempt
 @require_POST
-@csrf_protect
-def query_view(request):
+@async_ratelimit(ip_key, rate=60, window_seconds=60, limit_name="ip")
+@async_ratelimit(chat_id_key, rate=5, window_seconds=60, limit_name="chatid")
+async def query_view(request):
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
     try:
-        data = json.loads(request.body)
+        body = await sync_to_async(lambda: request.body)()
+        data = json.loads(body)
         prompt = data.get("prompt", "").strip()
         chat_id = data.get("chat_id")
         
@@ -47,6 +53,6 @@ def query_view(request):
     return response
 
 
-@ratelimit(key='ip', rate='10/m', block=True)
+@ratelimit(key='ip', rate='150/m', block=True)
 def home(request):
     return render(request, 'ragapp/new.html')
