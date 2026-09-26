@@ -20,7 +20,7 @@ class RAGChatUser(HttpUser):
     @task
     def chat(self):
         with self.client.post(
-            "/api/query/",
+            "/",
             json={"prompt": random.choice(PROMPTS), "chat_id": self.chat_id},
             catch_response=True,
             name="api/query",

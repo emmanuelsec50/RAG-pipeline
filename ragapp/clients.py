@@ -27,7 +27,7 @@ from decouple import config
 
 openrouter_client = AsyncOpenAI(
     base_url="https://openrouter.ai/api/v1",
-    api_key=config("VOYAGE_API"),
+    api_key=config("OPENROUTER_API"),
 )
 
 deepseek_client = AsyncOpenAI(

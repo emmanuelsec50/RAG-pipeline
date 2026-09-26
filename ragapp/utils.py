@@ -140,17 +140,44 @@ def print_top_results_and_scores(query: str,
 async def glm(prompt: str):
     
 
-    response = await deepseek_client.chat.completions.create(
-        model="deepseek-v4-flash",
-        messages=[
+    # response = await deepseek_client.chat.completions.create(
+    #     model="deepseek-v4-flash",
+    #     messages=[
+    #         {"role": "system", "content": "You are a helpful assistant"},
+    #         {"role": "user", "content": prompt},
+    #     ],
+    #     stream=True,
+    #     reasoning_effort="high",
+    #     extra_body={"thinking": {"type": "disabled"}}
+    # )
+    
+    # async for chunk in response:
+    #     if not getattr(chunk, "choices", None):
+    #         continue
+    #     if len(chunk.choices) == 0 or getattr(chunk.choices[0], "delta", None) is None:
+    #         continue
+    #     delta = chunk.choices[0].delta
+    #     reasoning = getattr(delta, "reasoning_content", None)
+    #     content = getattr(delta, "content", None)
+
+    #     if reasoning:
+    #         yield f"data: {json.dumps({'type': 'reasoning', 'text': reasoning})}\n\n"
+    #     if content:
+    #         yield f"data: {json.dumps({'type': 'content', 'text': content})}\n\n"
+    
+    # yield "data: [DONE]\n\n"
+
+
+    response = await openrouter_client.chat.completions.create(
+    model="deepseek/deepseek-v4.1-flash",
+    messages=[
             {"role": "system", "content": "You are a helpful assistant"},
             {"role": "user", "content": prompt},
-        ],
-        stream=True,
-        reasoning_effort="high",
-        extra_body={"thinking": {"type": "disabled"}}
+            ],
+    extra_body={"reasoning": {"enabled": False}},
+    max_tokens=19418,
+    stream=True
     )
-    
     async for chunk in response:
         if not getattr(chunk, "choices", None):
             continue
@@ -171,8 +198,7 @@ async def ask(query: str,
         conversation,
         temperature: float=0.7,
         max_new_tokens:int=256,
-        format_answer_text=True,
-        return_answer_only=True):
+        ):
     """
     Takes a query, finds relevant resources/context and generates an answer to the query based on the relevant resources.
     """
@@ -207,7 +233,7 @@ async def ask(query: str,
 
     # AUGMENTATION
     # Create the prompt and format it with context items
-    # convo = get_last_five_convo(conversation)
+    
     
     prompt = prompt_formatter(query=prompt,
                               context_items=context_items, conversation=convo)
